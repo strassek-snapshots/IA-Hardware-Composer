@@ -102,6 +102,7 @@ struct iahwc_backend {
   IAHWC_PFN_LAYER_SET_SOURCE_CROP iahwc_layer_set_source_crop;
   IAHWC_PFN_LAYER_SET_DISPLAY_FRAME iahwc_layer_set_display_frame;
   IAHWC_PFN_LAYER_SET_SURFACE_DAMAGE iahwc_layer_set_surface_damage;
+  IAHWC_PFN_LAYER_SET_PLANE_ALPHA iahwc_layer_set_plane_alpha;
   IAHWC_PFN_LAYER_SET_ACQUIRE_FENCE iahwc_layer_set_acquire_fence;
   IAHWC_PFN_LAYER_SET_USAGE iahwc_layer_set_usage;
 
@@ -839,6 +840,8 @@ static struct weston_plane *iahwc_output_prepare_cursor_view(
                                    display_frame);
   b->iahwc_layer_set_surface_damage(b->iahwc_device, 0, cursor_layer_id,
                                     damage_region);
+  b->iahwc_layer_set_plane_alpha(b->iahwc_device, 0, cursor_layer_id,
+                                 ev->alpha);
 
   struct weston_surface *es = ev->surface;
   es->keep_buffer = true;
@@ -1035,8 +1038,10 @@ static struct weston_plane *iahwc_output_prepare_overlay_view(
                                  source_crop);
   b->iahwc_layer_set_display_frame(b->iahwc_device, 0, overlay_layer_id,
                                    display_frame);
-  b->iahwc_layer_set_surface_damage(b->iahwc_device, 0,
-                                    overlay_layer_id, damage_region);
+  b->iahwc_layer_set_surface_damage(b->iahwc_device, 0, overlay_layer_id,
+                                    damage_region);
+  b->iahwc_layer_set_plane_alpha(b->iahwc_device, 0, overlay_layer_id,
+                                 ev->alpha);
 
   struct weston_surface *es = ev->surface;
   es->keep_buffer = true;
@@ -1230,7 +1235,9 @@ static void iahwc_assign_planes(struct weston_output *output_base,
       b->iahwc_layer_set_display_frame(b->iahwc_device, 0,
                                        output->primary_layer_id, viewport);
       b->iahwc_layer_set_surface_damage(
-        b->iahwc_device, 0, output->primary_layer_id, damage_region);
+          b->iahwc_device, 0, output->primary_layer_id, damage_region);
+      b->iahwc_layer_set_plane_alpha(b->iahwc_device, 0,
+                                     output->primary_layer_id, ev->alpha);
       pixman_region32_union(&overlap, &overlap, &ev->transform.boundingbox);
     }
 
@@ -1788,6 +1795,9 @@ static struct iahwc_backend *iahwc_backend_create(
   b->iahwc_layer_set_surface_damage =
       (IAHWC_PFN_LAYER_SET_SURFACE_DAMAGE)iahwc_device->getFunctionPtr(
           iahwc_device, IAHWC_FUNC_LAYER_SET_SURFACE_DAMAGE);
+  b->iahwc_layer_set_plane_alpha =
+      (IAHWC_PFN_LAYER_SET_PLANE_ALPHA)iahwc_device->getFunctionPtr(
+          iahwc_device, IAHWC_FUNC_LAYER_SET_PLANE_ALPHA);
   b->iahwc_layer_set_usage =
       (IAHWC_PFN_LAYER_SET_USAGE)iahwc_device->getFunctionPtr(
           iahwc_device, IAHWC_FUNC_LAYER_SET_USAGE);
