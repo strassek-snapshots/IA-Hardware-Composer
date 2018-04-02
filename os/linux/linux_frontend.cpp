@@ -50,7 +50,6 @@ class IAPixelUploaderCallback : public hwcomposer::PixelUploaderCallback {
   }
 
   void Callback(bool start_access, void* call_back_data) {
-    ETRACE("Got callback for Display layer %d \n", display_);
     if (hook_ != NULL) {
       auto hook = reinterpret_cast<IAHWC_PFN_PIXEL_UPLOADER>(hook_);
       hook(data_, display_, start_access ? 1 : 0, call_back_data);
@@ -367,6 +366,10 @@ IAHWC::IAHWCLayer::IAHWCLayer(PixelUploader* uploader)
 IAHWC::IAHWCLayer::~IAHWCLayer() {
   ::close(hwc_handle_.import_data.fd);
   if (pixel_buffer_) {
+    if (upload_in_progress_) {
+      raw_data_uploader_->Synchronize();
+    }
+
     const NativeBufferHandler* buffer_handler =
         raw_data_uploader_->GetNativeBufferHandler();
     buffer_handler->ReleaseBuffer(pixel_buffer_);
@@ -411,6 +414,10 @@ int IAHWC::IAHWCLayer::SetBo(gbm_bo* bo) {
 int IAHWC::IAHWCLayer::SetRawPixelData(iahwc_raw_pixel_data bo) {
   const NativeBufferHandler* buffer_handler =
       raw_data_uploader_->GetNativeBufferHandler();
+  if (upload_in_progress_) {
+    raw_data_uploader_->Synchronize();
+  }
+
   if (pixel_buffer_ &&
       ((orig_height_ != bo.height) || (orig_stride_ != bo.stride))) {
     buffer_handler->ReleaseBuffer(pixel_buffer_);
@@ -418,7 +425,6 @@ int IAHWC::IAHWCLayer::SetRawPixelData(iahwc_raw_pixel_data bo) {
   }
 
   if (!pixel_buffer_) {
-    ;
     int layer_type =
         layer_usage_ == IAHWC_LAYER_USAGE_CURSOR ? kLayerCursor : kLayerNormal;
     if (!buffer_handler->CreateBuffer(bo.width, bo.height, bo.format,
@@ -439,18 +445,23 @@ int IAHWC::IAHWCLayer::SetRawPixelData(iahwc_raw_pixel_data bo) {
 
     orig_height_ = bo.height;
     orig_stride_ = bo.stride;
+    upload_in_progress_ = true;
     raw_data_uploader_->UpdateLayerPixelData(pixel_buffer_, orig_height_,
                                              orig_stride_, bo.callback_data,
-                                             (uint8_t*)bo.buffer);
-
+                                             (uint8_t*)bo.buffer, this);
     iahwc_layer_.SetNativeHandle(pixel_buffer_);
   } else {
+    upload_in_progress_ = true;
     raw_data_uploader_->UpdateLayerPixelData(pixel_buffer_, orig_height_,
                                              orig_stride_, bo.callback_data,
-                                             (uint8_t*)bo.buffer);
+                                             (uint8_t*)bo.buffer, this);
   }
 
   return IAHWC_ERROR_NONE;
+}
+
+void IAHWC::IAHWCLayer::UploadDone() {
+  upload_in_progress_ = false;
 }
 
 int IAHWC::IAHWCLayer::SetAcquireFence(int32_t acquire_fence) {

@@ -24,6 +24,8 @@
 #include <type_traits>
 #include <vector>
 #include "iahwc.h"
+#include "pixeluploader.h"
+#include "spinlock.h"
 
 namespace hwcomposer {
 
@@ -35,10 +37,10 @@ class IAHWC : public iahwc_device {
   IAHWC();
   int32_t Init();
 
-  class IAHWCLayer {
+  class IAHWCLayer : public PixelUploaderLayerCallback {
    public:
     IAHWCLayer(PixelUploader* uploader);
-    ~IAHWCLayer();
+    ~IAHWCLayer() override;
     int SetBo(gbm_bo* bo);
     int SetRawPixelData(iahwc_raw_pixel_data bo);
     int SetAcquireFence(int32_t acquire_fence);
@@ -52,6 +54,8 @@ class IAHWC : public iahwc_device {
     int SetLayerSurfaceDamage(iahwc_region_t region);
     hwcomposer::HwcLayer* GetLayer();
 
+    void UploadDone() override;
+
    private:
     hwcomposer::HwcLayer iahwc_layer_;
     struct gbm_handle hwc_handle_;
@@ -60,6 +64,7 @@ class IAHWC : public iahwc_device {
     uint32_t orig_stride_ = 0;
     PixelUploader* raw_data_uploader_ = NULL;
     int32_t layer_usage_;
+    bool upload_in_progress_ = false;
   };
 
   class IAHWCDisplay {
