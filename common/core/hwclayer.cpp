@@ -63,6 +63,7 @@ void HwcLayer::SetSourceCrop(const HwcRect<float>& source_crop) {
       (source_crop.right != source_crop_.right) ||
       (source_crop.top != source_crop_.top) ||
       (source_crop.bottom != source_crop_.bottom)) {
+	    ETRACE("SetSourceCrop changed %f %f %f %f \n", source_crop.left, source_crop.right, source_crop.top, source_crop.bottom);
     layer_cache_ |= kSourceRectChanged;
     UpdateRenderingDamage(HwcRect<int>(source_crop), HwcRect<int>(source_crop_),
                           false);
@@ -80,6 +81,7 @@ void HwcLayer::SetDisplayFrame(const HwcRect<int>& display_frame,
       ((display_frame.right + translate_x_pos) != display_frame_.right) ||
       ((display_frame.top + translate_y_pos) != display_frame_.top) ||
       ((display_frame.bottom + translate_y_pos) != display_frame_.bottom)) {
+      ETRACE("FRame changed %d %d %d %d \n", display_frame.left, display_frame.right, display_frame.top, display_frame.bottom);
     layer_cache_ |= kDisplayFrameRectChanged;
     HwcRect<int> frame = display_frame;
     frame.left += translate_x_pos;

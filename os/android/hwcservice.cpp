@@ -75,11 +75,6 @@ bool HwcService::Start(IAHWC2 &hwc) {
     return true;
 
   mpHwc = &hwc;
-  sp<IServiceManager> sm(defaultServiceManager());
-  if (sm->addService(String16(IA_HWC_SERVICE_NAME), this, false)) {
-    ALOGE("Failed to start %s service", IA_HWC_SERVICE_NAME);
-    return false;
-  }
   initialized_ = true;
   return true;
 }
